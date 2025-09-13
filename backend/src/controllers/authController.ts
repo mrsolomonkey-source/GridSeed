@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import User from '../models/User';
 import { hashPassword, comparePassword } from '../utils/hash';
-import { generateToken, generateRefreshToken } from '../utils/jwt';
+import { generateToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt';
 import { UserRole } from '../types/user';
 
 export const register = async (req: Request, res: Response) => {
@@ -39,6 +39,23 @@ export const login = async (req: Request, res: Response) => {
 };
 
 export const refresh = async (req: Request, res: Response) => {
-  // Implement refresh logic here (see utils/jwt.ts)
-  res.status(501).json({ message: 'Not implemented' });
+  const { refreshToken } = req.body;
+  if (!refreshToken) return res.status(400).json({ message: 'Refresh token required' });
+
+  try {
+    const decoded = verifyRefreshToken(refreshToken) as { id: string };
+    const user = await User.findById(decoded.id);
+    if (!user) return res.status(401).json({ message: 'Invalid refresh token' });
+
+    const newToken = generateToken(user);
+    const newRefreshToken = generateRefreshToken(user);
+
+    res.json({
+      token: newToken,
+      refreshToken: newRefreshToken,
+      user: { id: user._id, name: user.name, email: user.email, role: user.role },
+    });
+  } catch (err) {
+    res.status(401).json({ message: 'Invalid or expired refresh token' });
+  }
 };
