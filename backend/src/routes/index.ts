@@ -1,6 +1,7 @@
 import { Router } from 'express';
+
 import authRoutes from './authRoutes';
-// import userRoutes from './userRoutes';
+import userRoutes from './userRoutes';
 // import productRoutes from './productRoutes';
 // import categoryRoutes from './categoryRoutes';
 // import orderRoutes from './orderRoutes';
@@ -9,7 +10,7 @@ import authRoutes from './authRoutes';
 const router = Router();
 
 router.use('/auth', authRoutes);
-// router.use('/users', userRoutes);
+router.use('/users', userRoutes);
 // router.use('/products', productRoutes);
 // router.use('/categories', categoryRoutes);
 // router.use('/orders', orderRoutes);
