@@ -1,0 +1,22 @@
+{
+  "name": "gridseed",
+  "version": "1.0.0",
+  "description": "As starter pack to initialize a organized and scalable system",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mrsolomonkey-source/GridSeed.git"
+  },
+  "keywords": [
+    "Jungle"
+  ],
+  "author": "Solo Monkey",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/mrsolomonkey-source/GridSeed/issues"
+  },
+  "homepage": "https://github.com/mrsolomonkey-source/GridSeed#readme"
+}
