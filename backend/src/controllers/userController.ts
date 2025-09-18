@@ -3,6 +3,7 @@ import User from '../models/User';
 import { hashPassword } from '../utils/hash';
 import { validationResult } from 'express-validator';
 import { UserRole } from '../types/user';
+import { roleCapabilities } from '../config/rolesConfig';
 
 /**
  * Utility: handle validation errors consistently
@@ -35,9 +36,18 @@ export const getUsers = async (req: Request, res: Response) => {
 
     const total = await User.countDocuments(query);
 
+    // Attach capabilities dynamically
+    const usersWithCaps = users.map(u => ({
+      id: u._id,
+      name: u.name,
+      email: u.email,
+      role: u.role,
+      capabilities: roleCapabilities[u.role]
+    }));
+
     res.json({
       success: true,
-      data: { users, total, page: +page, pages: Math.ceil(total / +limit) }
+      data: { users: usersWithCaps, total, page: +page, pages: Math.ceil(total / +limit) }
     });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Server error', error: err });
@@ -50,12 +60,20 @@ export const getUsers = async (req: Request, res: Response) => {
  */
 export const getCurrentUser = async (req: Request, res: Response) => {
   try {
-    // req.user should be set by authenticate middleware
     const userId = (req as any).user?.id;
     const user = await User.findById(userId).select('-password');
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
-    res.json({ success: true, data: user });
+    res.json({
+      success: true,
+      data: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        capabilities: roleCapabilities[user.role]
+      }
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Server error', error: err });
   }
@@ -69,7 +87,17 @@ export const getUserById = async (req: Request, res: Response) => {
   try {
     const user = await User.findById(req.params.id).select('-password');
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
-    res.json({ success: true, data: user });
+
+    res.json({
+      success: true,
+      data: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        capabilities: roleCapabilities[user.role]
+      }
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Server error', error: err });
   }
@@ -77,7 +105,7 @@ export const getUserById = async (req: Request, res: Response) => {
 
 /**
  * POST /api/users
- * Create a new user (Admin only)
+ * Create a new user
  */
 export const createUser = async (req: Request, res: Response) => {
   if (handleValidationErrors(req, res)) return;
@@ -92,7 +120,13 @@ export const createUser = async (req: Request, res: Response) => {
 
     res.status(201).json({
       success: true,
-      data: { id: user._id, name: user.name, email: user.email, role: user.role }
+      data: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        capabilities: roleCapabilities[user.role]
+      }
     });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Server error', error: err });
@@ -101,7 +135,7 @@ export const createUser = async (req: Request, res: Response) => {
 
 /**
  * PUT /api/users/:id
- * Update an existing user by ID (Admin only)
+ * Update an existing user by ID
  */
 export const updateUser = async (req: Request, res: Response) => {
   if (handleValidationErrors(req, res)) return;
@@ -119,7 +153,13 @@ export const updateUser = async (req: Request, res: Response) => {
     await user.save();
     res.json({
       success: true,
-      data: { id: user._id, name: user.name, email: user.email, role: user.role }
+      data: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        capabilities: roleCapabilities[user.role]
+      }
     });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Server error', error: err });
@@ -146,7 +186,13 @@ export const updateSelf = async (req: Request, res: Response) => {
     await user.save();
     res.json({
       success: true,
-      data: { id: user._id, name: user.name, email: user.email, role: user.role }
+      data: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        capabilities: roleCapabilities[user.role]
+      }
     });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Server error', error: err });
@@ -159,12 +205,9 @@ export const updateSelf = async (req: Request, res: Response) => {
  */
 export const deleteUser = async (req: Request, res: Response) => {
   try {
-    // Hard delete:
     const user = await User.findByIdAndDelete(req.params.id);
-
-    // For soft delete, replace with: await User.findByIdAndUpdate(req.params.id, { active: false });
-
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
     res.json({ success: true, message: 'User deleted' });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Server error', error: err });

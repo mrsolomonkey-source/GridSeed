@@ -11,7 +11,6 @@ import {
 } from '../controllers/userController';
 import { body, param, query } from 'express-validator';
 import { authenticate, authorize } from '../middleware/auth';
-import { UserRole } from '../types/user';
 
 const router = Router();
 
@@ -20,27 +19,26 @@ const router = Router();
  * USER ROUTES
  * ============================
  * This router handles all user-related endpoints:
- * - Admin-only management (CRUD on any user)
- * - Self-service endpoints (/me)
+ * - Management endpoints (CRUD on any user) → require "manage_users"
+ * - Self-service endpoints (/me) → require authentication only
  * - Role exposure for frontend apps
  * - Input validation with express-validator
- * - Authentication & role-based authorization
+ * - Authentication & capability-based authorization
  */
 
 /**
  * @route   GET /api/users
  * @desc    Fetch all users with optional pagination, filtering, and search
- * @access  Admin only
- * @query   page, limit, role, search
+ * @access  Requires "manage_users"
  */
 router.get(
   '/',
   authenticate,
-  authorize(UserRole.Admin),
+  authorize(['manage_users']),
   [
     query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
     query('limit').optional().isInt({ min: 1 }).withMessage('Limit must be a positive integer'),
-    query('role').optional().isIn(Object.values(UserRole)).withMessage('Invalid role'),
+    query('role').optional().isString().withMessage('Role must be a string'),
     query('search').optional().isString().withMessage('Search must be a string')
   ],
   getUsers
@@ -51,17 +49,21 @@ router.get(
  * @desc    Get the currently authenticated user's profile
  * @access  Authenticated users
  */
-router.get('/me', authenticate, getCurrentUser);
+router.get(
+  '/me', 
+  authenticate, 
+  getCurrentUser
+);
 
 /**
  * @route   GET /api/users/:id
  * @desc    Fetch a single user by ID
- * @access  Admin only
+ * @access  Requires "manage_users"
  */
 router.get(
   '/:id',
   authenticate,
-  authorize(UserRole.Admin),
+  authorize(['manage_users']),
   [param('id').isMongoId().withMessage('Invalid user ID')],
   getUserById
 );
@@ -69,17 +71,17 @@ router.get(
 /**
  * @route   POST /api/users
  * @desc    Create a new user
- * @access  Admin only
+ * @access  Requires "manage_users"
  */
 router.post(
   '/',
   authenticate,
-  authorize(UserRole.Admin),
+  authorize(['manage_users']),
   [
     body('name').notEmpty().withMessage('Name is required'),
     body('email').isEmail().withMessage('Valid email is required'),
     body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
-    body('role').isIn(Object.values(UserRole)).withMessage('Invalid role')
+    body('role').isString().withMessage('Role must be a string')
   ],
   createUser
 );
@@ -87,18 +89,18 @@ router.post(
 /**
  * @route   PUT /api/users/:id
  * @desc    Update an existing user by ID
- * @access  Admin only
+ * @access  Requires "manage_users"
  */
 router.put(
   '/:id',
   authenticate,
-  authorize(UserRole.Admin),
+  authorize(['manage_users']),
   [
     param('id').isMongoId().withMessage('Invalid user ID'),
     body('name').optional().notEmpty().withMessage('Name cannot be empty'),
     body('email').optional().isEmail().withMessage('Must be a valid email'),
     body('password').optional().isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
-    body('role').optional().isIn(Object.values(UserRole)).withMessage('Invalid role')
+    body('role').optional().isString().withMessage('Role must be a string')
   ],
   updateUser
 );
@@ -122,12 +124,12 @@ router.put(
 /**
  * @route   DELETE /api/users/:id
  * @desc    Delete a user by ID (soft delete recommended)
- * @access  Admin only
+ * @access  Requires "manage_users"
  */
 router.delete(
   '/:id',
   authenticate,
-  authorize(UserRole.Admin),
+  authorize(['manage_users']),
   [param('id').isMongoId().withMessage('Invalid user ID')],
   deleteUser
 );
@@ -135,8 +137,13 @@ router.delete(
 /**
  * @route   GET /api/users/roles
  * @desc    Get all available user roles
- * @access  Admin only
+ * @access  Requires "manage_users"
  */
-router.get('/roles', authenticate, authorize(UserRole.Admin), getUserRoles);
+router.get(
+  '/roles',
+  authenticate,
+  authorize(['manage_users']),
+  getUserRoles
+);
 
 export default router;
